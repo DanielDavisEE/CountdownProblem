@@ -1,13 +1,9 @@
 """
-Version where trees created by merge_trees are processed at every node rather
-than just the root. bruteforce_solutions2 is 4x slower than bruteforce_solutions
-when there are 4 numbers.
+bruteforce_solutions2 (which uses dynamic programming and exclusively operates
+on binary maths trees) has been improved to almost parity with bruteforce_solutions
+(which uses a greedy approach, operating on prefix expressions)
 
 
-Test trees:
-MathTree(['+', '2', '1'], sort=True, prefix=True)
-MathTree(['+', '2', '*', '4', '3'], sort=True, prefix=True)
-['*', '+', '9', '-', '1', '', '', '100', '10']
 """
 
 import random, math, itertools, time, bisect
@@ -83,18 +79,19 @@ def choose_numbers():
 class MathTree():
 
     @myTimerModule.timer_func    
-    def __init__(self, expression, *, sort=True, tree=False, prefix=False, infix=False, postfix=False):
+    def __init__(self, expression, *, sort=True, tree=False, prefix=False, infix=False, postfix=False, fromMerge=False):
         """
         MathTree object attributes:
          - tree
          - working_tree
          - result
+         - redundant
         """
         
         self.redundant = False
         
         if sum([tree, prefix, infix, postfix]) != 1:
-            raise TypeError("MathTree requires one of the keyword arguments, tree, prefix, infix, postfix, to be True")
+            raise TypeError("MathTree requires (only) one of the keyword arguments, tree, prefix, infix, postfix, to be True")
         
         if tree:
             self.tree = expression.copy()
@@ -107,13 +104,19 @@ class MathTree():
             raise ValueError("Input must be a binary tree or prefix expression.")
         
         # If the MathTree is a result of a merge between other trees, it should 
-        #    be a valid, sorted tree.
+        #    be a valid, sorted tree.\
         if not self.redundant:
-            self.verify_tree()
-            self.result = self.sum_tree()
-            self.sort()
+            if fromMerge:
+                self.result = self.process_tree()
+            else:
+                self.result = self.process_tree(recurse=True)
         else:
             self.result = None
+        
+
+    # --------------------------------------------------------
+    #    Built-in Tree Functions
+    # --------------------------------------------------------    
         
     def __str__(self):
         return 'Redundant' if self.redundant else ''.join(self.extract_expression(infix=True))
@@ -140,6 +143,9 @@ class MathTree():
         return self.tree[i]
     
     
+    # --------------------------------------------------------
+    #    Tree Creation Functions
+    # --------------------------------------------------------    
     
     @myTimerModule.timer_func
     def create_tree(self, expression):
@@ -188,7 +194,7 @@ class MathTree():
         new_tree[1] = str(self.result)
         new_tree[2] = str(tree.result)
         
-        new_MathTree = MathTree(new_tree, tree=True)
+        new_MathTree = MathTree(new_tree, tree=True, fromMerge=True)
         
         # Calculate overall length of new tree from old trees
         len_a, len_b = len(self.tree), len(tree.tree)
@@ -216,149 +222,199 @@ class MathTree():
             except IndexError:
                 pass      
             
-        self.traverse_tree_top_down(func=copy_left)
-        tree.traverse_tree_top_down(func=copy_right)
+        self.iterate_tree_top_down(func=copy_left)
+        tree.iterate_tree_top_down(func=copy_right)
         
         return new_MathTree
         
+   
+    # --------------------------------------------------------
+    #    Tree Processing Functions
+    # --------------------------------------------------------        
     
     @myTimerModule.timer_func
-    def verify_tree(self):
-        """ 
-        Verifies that a tree is a valid mathematical expression. Raises error
-            on any cases that are not.
+    def process_tree(self, *, recurse=False):
+        """
+        Simultaneously verify, evaluate and sort the tree using a single tree
+            traversal.
+        """
+        self.working_tree = self.tree.copy()
+        
+        if TEST or recurse:
+            f_list = [self.verify_node, self.evaluate_atom, self.sort_node]
+        else:
+            f_list = [self.evaluate_atom, self.sort_node]
+        
+        if recurse:
+            self.recurse_tree_bottom_up(f_list)
+        else:
+            for f in f_list:
+                f(0)
+        
+        if not self.redundant:
+            return int(self.working_tree[0])
+        else:
+            return None
+     
+     
+    @myTimerModule.timer_func
+    def verify_node(self, node):
+        """
+        The function that verifies one node is a valid mathematical expression
+            and is passed to the tree traversal funciton
         """
         
         @myTimerModule.timer_func
-        def verify_node(self, node):
+        def raise_error(self, problem_node):
             """
-            The function that verifies one node and is passed to the tree 
-                traversal funciton
+            Raises a TypeError on a node within a tree when called by verify_node.
             """
-            
-            @myTimerModule.timer_func
-            def raise_error(self, problem_node):
-                """
-                Raises a TypeError on a node within a tree when called by verify_node.
-                """
-                raise TypeError(
-                    f"Invalid input for MathTree: tree[{problem_node}] = '{self.tree[problem_node]}' ({type(self.tree[(problem_node - 1) // 2])})")
-            
-            child_a, child_b = 2 * node + 1, 2 * node + 2
-            childAInList, childBInList = True, True
-            
-            if type(self.tree[node]) is str:
-                # Check that the children of node either do not exist or are of
-                #    type string
-                try:
-                    if not type(self.tree[child_a]) is str:
-                        raise_error(child_a)
-                except IndexError:
-                    if self.tree[node] in OPERATORS:
-                        raise_error(self, node)
-                    childAInList = False
-                try:
-                    if not type(self.tree[child_b]) is str:
-                        raise_error(self, child_b)
-                except IndexError:
-                    if self.tree[node] in OPERATORS:
-                        raise_error(self, node)
-                    childBInList = False
-                
-                # If the child addresses of the node are within the list
-                if childAInList and childBInList:
-                    if self.tree[node] in OPERATORS:
-                        if not (self.tree[child_a].isdigit() 
-                                or self.tree[child_a] in OPERATORS):
-                            raise_error(self, child_a)
-                        if not (self.tree[child_b].isdigit() 
-                                or self.tree[child_b] in OPERATORS):
-                            raise_error(self, child_b)
-                        
-                    elif self.tree[node].isdigit():
-                        if not self.tree[child_a] == '':
-                            raise_error(self, child_a)
-                        if not self.tree[child_b] == '':
-                            raise_error(self, child_b)
-                        
-                    else:
-                        raise_error(self, node)
-                elif childAInList or childBInList:
+            raise TypeError(
+                f"Invalid input for MathTree: tree[{problem_node}] = '{self.tree[problem_node]}' ({type(self.tree[(problem_node - 1) // 2])})")
+        
+        child_a, child_b = 2 * node + 1, 2 * node + 2
+        childAInList, childBInList = True, True
+        
+        if type(self.tree[node]) is str:
+            # Check that the children of node either do not exist or are of
+            #    type string
+            try:
+                if not type(self.tree[child_a]) is str:
+                    raise_error(child_a)
+            except IndexError:
+                if self.tree[node] in OPERATORS:
                     raise_error(self, node)
-                    
-                    
-            else:
-                raise_error(self, node)
-                        
+                childAInList = False
+            try:
+                if not type(self.tree[child_b]) is str:
+                    raise_error(self, child_b)
+            except IndexError:
+                if self.tree[node] in OPERATORS:
+                    raise_error(self, node)
+                childBInList = False
             
-        self.recurse_tree(verify_node)
+            # If the child addresses of the node are within the list
+            if childAInList and childBInList:
+                if self.tree[node] in OPERATORS:
+                    if not (self.tree[child_a].isdigit() 
+                            or self.tree[child_a] in OPERATORS):
+                        raise_error(self, child_a)
+                    if not (self.tree[child_b].isdigit() 
+                            or self.tree[child_b] in OPERATORS):
+                        raise_error(self, child_b)
+                    
+                elif self.tree[node].isdigit():
+                    if not self.tree[child_a] == '':
+                        raise_error(self, child_a)
+                    if not self.tree[child_b] == '':
+                        raise_error(self, child_b)
+                    
+                else:
+                    raise_error(self, node)
+            elif childAInList or childBInList:
+                raise_error(self, node)
+                
+                
+        else:
+            raise_error(self, node)
 
         
     @myTimerModule.timer_func
-    def sort(self):
+    def sort_node(self, parent):
+        
+        mutable_operators = ('+', '*')            
         
         @myTimerModule.timer_func
-        def func(tree, parent):
+        def swap_branches(self, a, d=1):
+            b = 2 ** (d - 1) + a
+            tmp = len(self.tree)
+            if tmp <= max(a, b):
+                n = (max(a, b) - len(self.tree) + 1) * ['']
+                self.tree.extend(n)
+                self.working_tree.extend(n)
             
-            mutable_operators = ('+', '*')            
+            self.tree[a], self.tree[b] = self.tree[b], self.tree[a]
+            (self.working_tree[a], 
+             self.working_tree[b]) = (self.working_tree[b],
+                                      self.working_tree[a])
             
-            @myTimerModule.timer_func
-            def swap_branches(self, a, d=1):
-                b = 2 ** (d - 1) + a
-                tmp = len(self.tree)
-                if tmp <= max(a, b):
-                    n = (max(a, b) - len(self.tree) + 1) * ['']
-                    self.tree.extend(n)
-                    self.working_tree.extend(n)
-                
-                self.tree[a], self.tree[b] = self.tree[b], self.tree[a]
-                (self.working_tree[a], 
-                 self.working_tree[b]) = (self.working_tree[b],
-                                          self.working_tree[a])
-                
-                
-                if self.tree[a] in OPERATORS or self.tree[b] in OPERATORS:
-                    swap_branches(self, 2 * a + 1, d + 1)
-                    swap_branches(self, 2 * a + 2, d + 1)
-                
-            if self.tree[parent] in mutable_operators:
-                
-                a, b = 2 * parent + 1, 2 * parent + 2
-                
-                if (self.working_tree[a] is not None 
-                    and self.working_tree[b] is not None):
-                    if int(self.working_tree[a]) < int(self.working_tree[b]):
-                        swap_branches(self, a)
-                    elif self.working_tree[a] == self.working_tree[b]:
-                        # Need to figure out a consistant method of sorting nodes
-                        #    with equal value. What about edge cases with very 
-                        #    similar nodes?
-                        tmp_a, tmp_b = a, b
-                        try:
-                            while self.working_tree[tmp_a] == self.working_tree[tmp_b]:
-                                child_a, child_b = 2 * tmp_a + 1, 2 * tmp_b + 1
-                                if (not self.working_tree[child_a].isdigit()
-                                    and self.working_tree[child_b].isdigit()):
-                                    swap_branches(self, a)
-                                    break
-                                tmp_a, tmp_b = child_a, child_b
-                        except IndexError:
-                            pass
-                        else:
-                            if self.working_tree[tmp_b] > self.working_tree[tmp_a]:
+            
+            if self.tree[a] in OPERATORS or self.tree[b] in OPERATORS:
+                swap_branches(self, 2 * a + 1, d + 1)
+                swap_branches(self, 2 * a + 2, d + 1)
+            
+        if self.tree[parent] in mutable_operators:
+            
+            a, b = 2 * parent + 1, 2 * parent + 2
+            
+            if (self.working_tree[a] is not None 
+                and self.working_tree[b] is not None):
+                if int(self.working_tree[a]) < int(self.working_tree[b]):
+                    swap_branches(self, a)
+                elif self.working_tree[a] == self.working_tree[b]:
+                    # Need to figure out a consistant method of sorting nodes
+                    #    with equal value. What about edge cases with very 
+                    #    similar nodes?
+                    tmp_a, tmp_b = a, b
+                    try:
+                        while self.working_tree[tmp_a] == self.working_tree[tmp_b]:
+                            child_a, child_b = 2 * tmp_a + 1, 2 * tmp_b + 1
+                            if (not self.working_tree[child_a].isdigit()
+                                and self.working_tree[child_b].isdigit()):
                                 swap_branches(self, a)
-                
-            return None
-        
-        self.recurse_tree(func)
-        
-        index = len(self.tree) - 1
-        while self.tree[index] == '':
-            index -= 1
+                                break
+                            tmp_a, tmp_b = child_a, child_b
+                    except IndexError:
+                        pass
+                    else:
+                        if self.working_tree[tmp_b] > self.working_tree[tmp_a]:
+                            swap_branches(self, a)
             
-        self.tree = self.tree[:index + 1]
-        self.working_tree = self.working_tree[:index + 1]
-
+        return None
+    
+                
+    @myTimerModule.timer_func
+    def evaluate_atom(self, parent):
+        op = self.working_tree[parent]
+        if op.isdigit():
+            return True
+        
+        a, b = (self.working_tree[2 * parent + 1],
+                self.working_tree[2 * parent + 2])
+        
+        try:
+            a, b = int(a), int(b)
+        except TypeError:
+            self.working_tree[parent] = None
+            self.redundant = True
+            return False
+        
+        if op == '+':
+            tmp = a + b
+        elif op == '-':
+            tmp = a - b
+        elif op == '*':
+            tmp = a * b
+        elif op == '/':
+            if a % b != 0:
+                self.working_tree[parent] = None
+                self.redundant = True
+                return False                
+            tmp = int(a / b)
+                
+        if tmp == 0:
+            self.working_tree[parent] = None
+            self.redundant = True
+            return False
+        
+        self.working_tree[parent] = str(int(tmp))
+            
+        return True        
+    
+    
+    # --------------------------------------------------------
+    #    Tree Traversal Functions
+    # --------------------------------------------------------
         
     @myTimerModule.timer_func
     def recurse_prefix(self, sub_expression, func):
@@ -396,7 +452,7 @@ class MathTree():
 
         
     @myTimerModule.timer_func        
-    def traverse_tree_bottom_up(self, func):
+    def iterate_tree_bottom_up(self, func):
         """Function for iteratively traversing over the tree. Works bottom up
               (skipping leaves) and applies the given function to each node.
         """
@@ -417,30 +473,10 @@ class MathTree():
                 return False
             
             i -= 1
-            
-        # ---------------------------------------
-        
-        #queue = [0]
-        #stack = []
-        
-        #while queue:
-            #i = queue.pop()
-            
-            #if self[i] in OPERATORS:
-                #queue.extend([2 * i + 1, 2 * i + 2])
-            
-            #d = bisect.bisect_right(POWERS_OF_2, i + 1) - 1
-            
-            #stack.append(self[i])
-            
-            #if self.redundant:
-                #return False
-            
-        #while stack:
-            #func(self, stack.pop())
+
             
     @myTimerModule.timer_func        
-    def traverse_tree_top_down(self, func):
+    def iterate_tree_top_down(self, func):
         """Function for iteratively traversing over the tree. Works bottom up
               (skipping leaves) and applies the given function to each node.
         """
@@ -461,60 +497,20 @@ class MathTree():
             
     
     @myTimerModule.timer_func        
-    def recurse_tree(self, func, i=0):
+    def recurse_tree_bottom_up(self, *funcs, i=0):
         """Function for iteratively traversing over the tree. Works bottom up
               (skipping leaves) and applies the given function to each node.
         """
-        if self[i].isdigit():
-            func(self, i)
-        else:
-            self.recurse_tree(func, 2 * i + 1)
-            self.recurse_tree(func, 2 * i + 2)
-            func(self, i)            
-
-            
-    @myTimerModule.timer_func
-    def sum_tree(self):
-        
-        self.working_tree = self.tree.copy()
-        
-        @myTimerModule.timer_func
-        def evaluate_atom(self, parent):
-            op = self.working_tree[parent]
-            if op.isdigit():
-                return True
-            
-            a, b = (int(self.working_tree[2 * parent + 1]),
-                    int(self.working_tree[2 * parent + 2]))
-            
-            if op == '+':
-                tmp = a + b
-            elif op == '-':
-                tmp = a - b
-            elif op == '*':
-                tmp = a * b
-            elif op == '/':
-                if a % b != 0:
-                    self.working_tree[parent] = None
-                    self.redundant = True
-                    return False                
-                tmp = int(a / b)
-                    
-            if tmp == 0:
-                self.working_tree[parent] = None
-                self.redundant = True
-                return False
-            
-            self.working_tree[parent] = str(int(tmp))
-                
-            return True
-        
-        self.recurse_tree(evaluate_atom)
-        
-        if not self.redundant:
-            return int(self.working_tree[0])
-        else:
+        if self.redundant:
             return None
+        elif self[i].isdigit():
+            for f in funcs[0]:
+                f(i)
+        else:
+            self.recurse_tree_bottom_up(*funcs, i=2 * i + 1)
+            self.recurse_tree_bottom_up(*funcs, i=2 * i + 2)
+            for f in funcs[0]:
+                f(i)            
     
 
     @myTimerModule.timer_func    
@@ -585,6 +581,7 @@ class MathTree():
         return expression
 
 
+
 class EquationGenerator():
     
     def __init__(self, numbers):
@@ -603,7 +600,7 @@ class EquationGenerator():
         self.structure = {
             (operands): ({combinations of n-1 operands}, {result: {expressions, ...}}),
             tuple(str(), ...): tuple(set(tuple(), ...), dict(int(): set(MathTree(), ...))),
-            ('1,'): ({set()}, {1: 1}),
+            ('1,'): ({set()}, {1: [1]}),
             ...
         }
         """
@@ -630,25 +627,7 @@ class EquationGenerator():
             structure[number_set][1][int(number_set[0])] = set([MathTree(list(number_set), prefix=True)])
         
         self.structure = structure
-    
 
-    def find_combinations(self, operands, i):
-        queue = []
-        tmp = []
-        j = 0
-        k = 1
-        while len(queue) < (math.factorial(len(operands)) 
-                            / (math.factorial(i) * math.factorial(len(operands) - i))):
-            while len(tmp) < i:
-                tmp.append(operands[j])
-                j += 1
-            queue.append(tmp.copy())
-            tmp.pop()
-            if j > len(operands) - 1:
-                tmp.pop()
-                j -= len(operands) - i + k
-                k -= 1
-        return queue
 
     @myTimerModule.timer_func    
     def generate_expressions(self):
@@ -668,12 +647,17 @@ class EquationGenerator():
         while queue != []:
             operands = queue.pop(0)
             queue.extend(self.structure[operands][0])
-            n = len(operands) - 1
-            m = n // 2
+            n = len(operands)
+            m = (n - 1) // 2
             
             # Find all ways of choose between n and m numbers from operands
-            for i in range(n, m, -1):
+            for i in range(n - 1, m, -1):
                 components = itertools.combinations(operands, i)
+                
+                if i == n / 2:
+                    operands_tmp = operands[0]
+                    components_tmp = itertools.combinations(operands[1:], i-1)
+                    components = ((operands_tmp,) + x for x in components_tmp)
                 
                 for component in components:
                     complement = tuple(sorted(list(set(operands).difference(set(component))), key=int))
@@ -810,20 +794,6 @@ def print_closest_answers(results_dict, target):
     for result in closest_results:
         print(f'\t{result}')
         [print(' '.join(x.extract_expression(prefix=True)),'\t', ''.join(x.extract_expression(infix=True))) for x in results_dict[result]]
-
-
-def test_infix_utilities():
-
-    tests = {
-        1: (list('+54'), 9),
-        2: (list('*+546'), 54),
-        3: (list('-/63*22'), -2)
-    }
-    
-    for t in tests.values():
-        result = int(recurse_prefix(t[0], evaluate_infix))
-        infix = ''.join(extract_expression(t[0][1:-1], infix=True))
-        print(infix, '=', result, result == t[1])
         
         
 def main():
@@ -865,18 +835,12 @@ def main():
 if __name__ == '__main__':
     #a = main()
 
-    #dict_a = bruteforce_solutions([100, 1, 9, 10])
-    #print(sorted(list(dict_a.keys())))
-         
-    dict_b = bruteforce_solutions2([100, 1, 9, 10])
+    numbers = [100, 1, 9, 10]
+    
+    dict_a = bruteforce_solutions(numbers)
+    print(sorted(list(dict_a.keys())))
+
+    dict_b = bruteforce_solutions2(numbers)
     print(sorted(list(dict_b.keys())))
     
-    myTimerModule.print_results()
-    
-    #a = MathTree(['+', '2', '1'], sort=True, prefix=True)
-    #b = MathTree(['+', '2', '*', '4', '3'], sort=True, prefix=True)
-    #print(a, a.result, b, b.result)
-    #c = a.merge_trees('+', b)
-    #d = b.merge_trees('+', a)  
-    #print()
-    #print(c, c.result, d, d.result)
+    myTimerModule.print_results(10)
