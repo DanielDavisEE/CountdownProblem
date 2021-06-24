@@ -354,7 +354,7 @@ def main():
 if __name__ == '__main__':
     #a = main()
 
-    numbers = [2, 10, 7]#, 5, 25, 75]
+    numbers = [2, 10, 7, 5]#, 25, 75]
     
     #dict_a = bruteforce_solutions(numbers)
     #print(sorted(list(dict_a.keys())))
@@ -374,4 +374,5 @@ if __name__ == '__main__':
         if i not in numbers:
             print('\n\t', i)
             for j in dict_b[i]:
-                print(j.to_infix(), '\t ########## ', ' '.join(j))
+                print(f"{j.to_infix():32}\t##########\t{' '.join(j)}")
+    #myTimerModule.print_results()
