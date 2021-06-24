@@ -131,10 +131,12 @@ class EquationGenerator():
         
         def add_components(self, branch1, branch2):
             viable_trees = []
+            #for f in [MathList.__add__,
+                      #MathList.__sub__]:
             for f in [MathList.__add__,
                       MathList.__sub__,
                       MathList.__mul__,
-                      MathList.__truediv__]:           
+                      MathList.__truediv__]:          
                 tree = f(branch1, branch2)     
                 if tree is not None and tree.result > 0:
                     viable_trees.append(tree)
@@ -157,56 +159,43 @@ class EquationGenerator():
             m = (n - 1) // 2
             #print(f"{operands}")
             
-            # Find all ways of choose between n and m numbers from operands
-            for i in range(n - 1, m, -1):
-                components = itertools.combinations(operands, i)
-                
-                if i == n / 2:
-                    operands_tmp = operands[0]
-                    components_tmp = itertools.combinations(operands[1:], i-1)
-                    components = ((operands_tmp,) + x for x in components_tmp)
-        
+            components = generate_components(operands)
+            for component, complement in components:
+                #print(f"\t{component} - {complement}")
+               
+                # Iterate results found with numbers in components
+                for i in self.structure[component][1]:
                     
-                for component in components:
-                    complement = tuple(sorted(list(set(operands).difference(set(component))), key=int, reverse=True))
-                    
-                    #print(f"\t{component} - {complement}")
-                   
-                    # Iterate results found with numbers in components
-                    for i in self.structure[component][1]:
+                    # Iterate results found with numbers in complement
+                    for j in self.structure[complement][1]:
                         
-                        # Iterate results found with numbers in complement
-                        for j in self.structure[complement][1]:
+                        # Iterate expressions that give results in component
+                        for x in self.structure[component][1][i]:
                             
-                            # Iterate expressions that give results in component
-                            for x in self.structure[component][1][i]:
+                            # Iterate expressions that give results in complement
+                            for y in self.structure[complement][1][j]:
+                                # Make sure that expressions are accurately assigned results
+                                #assert i == x.result and j == y.result
                                 
-                                # Iterate expressions that give results in complement
-                                for y in self.structure[complement][1][j]:
-                                    # Make sure that expressions are accurately assigned results
-                                    #assert i == x.result and j == y.result
-                                    
-                                    if i > j:
-                                        viable_trees = add_components(self, x, y)
-                                    elif j > i:
-                                        viable_trees = add_components(self, y, x)
+                                if i > j:
+                                    viable_trees = add_components(self, x, y)
+                                elif j > i:
+                                    viable_trees = add_components(self, y, x)
+                                else:
+                                    viable_trees = add_components(self, x, y)
+                                
+                                for new_tree in viable_trees:
+                                    # Test whether tree is already in structure here
+                                    existing_trees = self.structure[operands][1].get(new_tree.result, set())
+                                    if new_tree in existing_trees:
+                                        print(new_tree.result, new_tree)
                                     else:
-                                        viable_trees = add_components(self, x, y)
+                                        existing_trees.add(new_tree)
+                                        self.structure[operands][1][new_tree.result] = existing_trees
                                     
-                                    for new_tree in viable_trees:
-                                        # Test whether tree is already in structure here
-                                        existing_trees = self.structure[operands][1].get(new_tree.result, set())
-                                        if new_tree in existing_trees:
-                                            pass
-                                            #print(new_tree.result, new_tree)
-                                        else:
-                                            existing_trees.add(new_tree)
-                                            self.structure[operands][1][new_tree.result] = existing_trees
-                                        
-                                        
-                                        #self.structure[operands][1][new_tree.result] = self.structure[operands][1].get(new_tree.result, set())
-                                        
-                                        #self.structure[operands][1][new_tree.result].add(new_tree)
+                                    #self.structure[operands][1][new_tree.result] = self.structure[operands][1].get(new_tree.result, set())
+                                    
+                                    #self.structure[operands][1][new_tree.result].add(new_tree)
             processed.append(operands)
                                         
                                         
@@ -367,8 +356,8 @@ if __name__ == '__main__':
 
     numbers = [2, 10, 7]#, 5, 25, 75]
     
-    ##dict_a = bruteforce_solutions(numbers)
-    ##print(sorted(list(dict_a.keys())))
+    #dict_a = bruteforce_solutions(numbers)
+    #print(sorted(list(dict_a.keys())))
 
 
     dict_b, _ = bruteforce_solutions2(numbers)
