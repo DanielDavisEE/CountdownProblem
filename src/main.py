@@ -9,7 +9,7 @@ on binary maths trees) has been improved to almost parity with bruteforce_soluti
 import random, math, itertools, time, bisect
 from os import system, name
 import myTimerModule
-from MathStructures import MathTree, MathList
+from math_structures import MathTree, MathList
 
 TEST = False
 
@@ -91,7 +91,6 @@ class EquationGenerator():
         self.numbers = numbers
         self.generate_structure()
 
-    @myTimerModule.timer_func
     def generate_structure(self):
         """
         self.structure = {
@@ -124,7 +123,6 @@ class EquationGenerator():
 
         self.structure = structure
 
-    @myTimerModule.timer_func
     def generate_expressions(self):
 
         def add_components(self, branch1, branch2):
@@ -201,7 +199,7 @@ class EquationGenerator():
 # Functions
 # ------------------------------
 
-@myTimerModule.timer_func
+
 def bruteforce_solutions(numbers, n=None):
     """list, int -> dict
        Using a recursion tree, bruteforce all possible workings using the given
@@ -273,7 +271,6 @@ def bruteforce_solutions(numbers, n=None):
     return results_dict, {}
 
 
-@myTimerModule.timer_func
 def bruteforce_solutions2(numbers):
     generator = EquationGenerator([str(x) for x in numbers])
     # [print(f"{x}{' '*(20-len(str(x)))}{y}") for x, y in generator.structure.items()]
@@ -290,7 +287,6 @@ def bruteforce_solutions2(numbers):
     return values, {}
 
 
-@myTimerModule.timer_func
 def print_closest_answers(results_dict, target):
     """Find and print the result closest to the target, and all workings for
           this number. For ties, the first encountered is selected.
