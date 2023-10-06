@@ -1,5 +1,4 @@
 import unittest
-from unittest import mock
 
 from countdown_numbers_solver.math_structures import MathList
 

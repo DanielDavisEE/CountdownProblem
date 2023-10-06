@@ -7,7 +7,7 @@ on binary maths trees) has been improved to almost parity with bruteforce_soluti
 """
 import itertools
 import random
-from math_structures import MathList, OPERATORS
+from countdown_numbers_solver.math_structures import MathList, OPERATORS
 import bisect
 
 TOTAL_NUMBERS = 6
@@ -56,7 +56,7 @@ class TreeRecursionGenerator:
                         self.generate_recurse(_complement)
 
 
-def choose_numbers():
+def choose_numbers() -> tuple[list[int], int]:
     target_number = random.randint(100, 999)
 
     while True:
@@ -77,7 +77,7 @@ def choose_numbers():
     return numbers, target_number
 
 
-def print_closest_answers(results_dict, target):
+def print_closest_answers(results_dict: dict[int, list[MathList]], target: int):
     """Find and print the result closest to the target, and all workings for
           this number. For ties, the first encountered is selected.
     """
@@ -97,8 +97,8 @@ def print_closest_answers(results_dict, target):
 
 
 def main():
-    quit = False
-    while not quit:
+    running = True
+    while running:
         numbers, target_number = choose_numbers()
 
         results_dict = TreeRecursionGenerator(numbers).results
@@ -112,12 +112,12 @@ def main():
         print(f'{tmp} numbers between 100 and 999 (inclusive) were unable to be found.')
 
         tmp = input('Restart? [y/n]: ')
-        quit = None
-        while quit is None:
+        running = None
+        while running is None:
             if tmp.lower() in ['n', 'no']:
-                quit = True
+                running = False
             elif tmp.lower() in ['y', 'yes']:
-                quit = False
+                running = True
             else:
                 tmp = input('What was that? [y/n]: ')
 
