@@ -7,11 +7,8 @@ on binary maths trees) has been improved to almost parity with bruteforce_soluti
 """
 import itertools
 import random
-from os import system, name
 from math_structures import MathList, OPERATORS
 import bisect
-
-DEBUG = False
 
 TOTAL_NUMBERS = 6
 SMALL_NUMBERS = sorted([x for x in range(1, 11)] * 2)
@@ -59,35 +56,16 @@ class TreeRecursionGenerator:
                         self.generate_recurse(_complement)
 
 
-# ---------------
-# Random Utility
-# ---------------
-def clear():
-    """clear cmd output
-    """
-    # for windows
-    if name == 'nt':
-        _ = system('cls')
-
-        # for mac and linux(here, os.name is 'posix')
-    else:
-        _ = system('clear')
-
-    # ---------------
-
-
-# Choose numbers
-# ---------------
 def choose_numbers():
     target_number = random.randint(100, 999)
 
-    small_count = 0
-    while small_count < 2:
+    while True:
         try:
-            small_count = int(input('How many small numbers? (Between 2 and 6 inclusive): '))
-        except ValueError:
-            print('Must be an integer, try again.', end='\r')
-        # clear() # For clearing output when run in cmd
+            small_count = int(input('How many small numbers? (Between 2 and 6, inclusive): '))
+            assert 2 <= small_count <= 6
+        except (ValueError, AssertionError):
+            continue
+        break
 
     large_count = TOTAL_NUMBERS - small_count
 
@@ -124,8 +102,6 @@ def main():
         numbers, target_number = choose_numbers()
 
         results_dict = TreeRecursionGenerator(numbers).results
-        if DEBUG:
-            print(*results_dict.items(), sep='\n')
 
         print_closest_answers(results_dict, target_number)
         print(f'\n{len(results_dict.keys())} distinct numbers found.')
@@ -138,9 +114,9 @@ def main():
         tmp = input('Restart? [y/n]: ')
         quit = None
         while quit is None:
-            if tmp.lower() == 'n':
+            if tmp.lower() in ['n', 'no']:
                 quit = True
-            elif tmp.lower() == 'y':
+            elif tmp.lower() in ['y', 'yes']:
                 quit = False
             else:
                 tmp = input('What was that? [y/n]: ')
