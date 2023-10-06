@@ -1,6 +1,6 @@
 from typing import Self
 
-OPERATORS = ['+', '-', '*', '/']
+OPERATORS = {'+', '-', '*', '/'}
 DEBUG = False
 
 

@@ -8,14 +8,13 @@ on binary maths trees) has been improved to almost parity with bruteforce_soluti
 
 import random
 from os import system, name
-from math_structures import MathList
+from math_structures import MathList, OPERATORS
 
-TEST = False
+DEBUG = False
 
 TOTAL_NUMBERS = 6
 SMALL_NUMBERS = sorted([x for x in range(1, 11)] * 2)
 LARGE_NUMBERS = [25, 50, 75, 100]
-OPERATORS = ('+', '-', '*', '/')
 POWERS_OF_2 = [2 ** x for x in range(8)]
 
 
@@ -233,9 +232,6 @@ def print_closest_answers(results_dict, target):
 
 
 def main():
-    if TEST:
-        pass  # test_infix_utilities()
-
     numbers, target_number = [2, 3], 10
     results_dict = {}
     quit = False
@@ -247,7 +243,7 @@ def main():
         # choose_numbers()
 
         results_dict, repeats_dict = bruteforce_solutions(numbers)
-        if TEST:
+        if DEBUG:
             [print(x) for x in results_dict.items()]
 
         print_closest_answers(results_dict, target_number)
