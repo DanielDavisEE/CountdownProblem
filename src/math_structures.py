@@ -128,4 +128,7 @@ class MathList:
             sub_expression_b) + [')']
 
     def to_infix(self) -> str:
-        return ''.join(self._to_infix_list(self.expression))[1:-1]
+        infix_list = self._to_infix_list(self.expression)
+        if len(infix_list) > 1:
+            infix_list = infix_list[1:-1]
+        return ''.join(infix_list)

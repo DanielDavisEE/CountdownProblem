@@ -20,21 +20,34 @@ class TestMathList(unittest.TestCase):
         self.assertEqual(MathList._evaluate_expression(['-', '4', '3']), 1)
 
     def test_addition(self):
-        self.assertEqual(self.expression_one + self.expression_two,
+        result = self.expression_one + self.expression_two
+        self.assertListEqual(result.expression,
+                             ['+', '+', '2', '1', '-', '4', '3'])
+        self.assertEqual(result.result,
                          self.expression_one.result + self.expression_two.result)
 
     def test_subtraction(self):
-        self.assertEqual(self.expression_one - self.expression_two,
+        result = self.expression_one - self.expression_two
+        self.assertListEqual(result.expression,
+                             ['-', '+', '2', '1', '-', '4', '3'])
+        self.assertEqual(result.result,
                          self.expression_one.result - self.expression_two.result)
 
     def test_multiplication(self):
-        self.assertEqual(self.expression_one * self.expression_two,
+        result = self.expression_one * self.expression_two
+        self.assertListEqual(result.expression,
+                             ['*', '+', '2', '1', '-', '4', '3'])
+        self.assertEqual(result.result,
                          self.expression_one.result * self.expression_two.result)
 
     def test_division(self):
-        self.assertEqual(self.expression_one / self.expression_two,
+        result = self.expression_one / self.expression_two
+        self.assertListEqual(result.expression,
+                             ['/', '+', '2', '1', '-', '4', '3'])
+        self.assertEqual(result.result,
                          self.expression_one.result / self.expression_two.result)
 
     def test_infix_conversion(self):
+        self.assertEqual(MathList._from_math_list(['2'], 2).to_infix(), '2')
         self.assertEqual(self.expression_one.to_infix(), '2 + 1')
         self.assertEqual((self.expression_one + self.expression_two).to_infix(), '(2 + 1) + (4 - 3)')
