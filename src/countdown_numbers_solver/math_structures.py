@@ -1,3 +1,5 @@
+import functools
+from functools import lru_cache, cached_property
 from typing import Self
 
 OPERATORS = frozenset(['+', '-', '*', '/'])
@@ -29,9 +31,9 @@ class MathList:
     def result(self):
         return self._result
 
-    @property
+    @cached_property
     def numbers(self):
-        return tuple(item.isdigit() for item in self.expression)
+        return tuple(sorted([item.isdigit() for item in self.expression]))
 
     @classmethod
     def _from_math_list(cls, expression, result):
@@ -88,13 +90,13 @@ class MathList:
         return self.result >= other.result
 
     def __hash__(self):
-        return tuple(self.expression).__hash__()
+        return (self.numbers, self.result).__hash__()
 
     def __str__(self):
-        return f"{self.to_infix()}={self.result}"
+        return f"{self.to_infix()} = {self.result}"
 
     def __repr__(self):
-        return self.expression, self.result
+        return f"MathList({self.expression}, {self.result})"
 
     def __copy__(self):
         return MathList._from_math_list(self.expression.copy(), self.result)
