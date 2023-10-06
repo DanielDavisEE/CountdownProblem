@@ -1,6 +1,6 @@
 from typing import Self
 
-OPERATORS = {'+', '-', '*', '/'}
+OPERATORS = frozenset(['+', '-', '*', '/'])
 DEBUG = False
 
 
@@ -12,21 +12,32 @@ class MathList:
         Args:
             expression: A prefix expression represented as a list of strings
                 e.g.: ['+', '2', '1']
-            result: The result of the expression
         """
-        self.expression = expression
+        self._expression = expression
 
         if self.expression is not None:
             self._validate_expression(expression)
-            self.result = self._evaluate_expression(expression)
+            self._result = self._evaluate_expression(expression)
         else:
-            self.result = None
+            self._result = None
+
+    @property
+    def expression(self):
+        return self._expression
+
+    @property
+    def result(self):
+        return self._result
+
+    @property
+    def numbers(self):
+        return tuple(item.isdigit() for item in self.expression)
 
     @classmethod
     def _from_math_list(cls, expression, result):
         inst = MathList()
-        inst.expression = expression
-        inst.result = result
+        inst._expression = expression
+        inst._result = result
         return inst
 
     def __add__(self, other: Self) -> Self:
@@ -58,14 +69,23 @@ class MathList:
 
         return MathList._from_math_list(new_expression, new_result)
 
-    def __eq__(self, other) -> bool:
-        if isinstance(other, int):
-            return self.result == other
-        if isinstance(other, float):
-            return self.result == other
-        elif isinstance(other, MathList):
-            return self.result == other.result
-        raise NotImplementedError(f"Equality not implemented for MathList and {type(other)}")
+    def __eq__(self, other: Self) -> bool:
+        return self.result == other.result
+
+    def __ne__(self, other: Self) -> bool:
+        return self.result != other.result
+
+    def __lt__(self, other: Self) -> bool:
+        return self.result < other.result
+
+    def __gt__(self, other: Self) -> bool:
+        return self.result > other.result
+
+    def __le__(self, other: Self) -> bool:
+        return self.result <= other.result
+
+    def __ge__(self, other: Self) -> bool:
+        return self.result >= other.result
 
     def __hash__(self):
         return tuple(self.expression).__hash__()
@@ -75,6 +95,12 @@ class MathList:
 
     def __repr__(self):
         return self.expression, self.result
+
+    def __copy__(self):
+        return MathList._from_math_list(self.expression.copy(), self.result)
+
+    def copy(self):
+        return MathList._from_math_list(self.expression.copy(), self.result)
 
     @staticmethod
     def _validate_expression(expression) -> None:
@@ -112,9 +138,6 @@ class MathList:
             f"{cls._evaluate_expression(sub_expression_a)}{operator}{cls._evaluate_expression(sub_expression_b)}")
 
     def sort(self) -> None:
-        pass
-
-    def iterate_bottom_up(self, func):
         pass
 
     @classmethod

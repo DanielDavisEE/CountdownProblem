@@ -5,7 +5,7 @@ on binary maths trees) has been improved to almost parity with bruteforce_soluti
 
 
 """
-
+import itertools
 import random
 from os import system, name
 from math_structures import MathList, OPERATORS
@@ -88,36 +88,61 @@ class EquationGenerator():
         self.numbers = numbers
         self.generate_structure()
 
+    def _recurse(self, group, options):
+        if len(group) == len(options):
+            return None
+
+        for option in options:
+            if option not in group:
+                new_group = tuple(sorted(list(group) + [option], key=int, reverse=True))
+
+                self.structure[new_group] = self.structure.get(new_group, (set(), {}))
+                self.structure[group][0].add(new_group)
+                self._recurse(new_group, options)
+
     def generate_structure(self):
         """
-        self.structure = {
-            (operands): ({combinations of n-1 operands}, {result: {expressions, ...}}),
-            tuple(str(), ...): tuple(set(tuple(), ...), dict(int(): set(MathTree(), ...))),
-            ('1,'): ({set()}, {1: [1]}),
-            ...
+        # self.structure = {
+        #     (operands): ({combinations of n-1 operands}, {result: {expressions, ...}}),
+        #     tuple(str(), ...): tuple(set(tuple(), ...), dict(int(): set(MathTree(), ...))),
+        #     ('1,'): ({set()}, {1: [1]}),
+        #     ...
+        # }
+        structure = {
+            ('operands'): (
+                {'combinations of n-1 operands'},
+                {'result': {'expressions', '...'}}
+            ),
+            tuple[str]: (
+                set[tuple],
+                {int: set[MathList]}
+            ),
+            ('1',): (
+                {set()},
+                {1: {MathList(['1'])}}
+            ),
+            ('1', '2'): (
+                {('1',), ('2',)},
+                {1: {MathList(['1']),
+                     MathList(['-', '2', '1'])},
+                 2: {MathList(['2']),
+                     MathList(['*', '2', '1']),
+                     MathList(['*', '1', '2']),
+                     },
+                 3: {MathList(['+', '2', '1']),
+                     MathList(['+', '1', '2']),
+                     }
+                 }
+            ),
         }
         """
-
         self.structure = {tuple(): (set(), {})}
 
-        def recurse(group, options):
-            if len(group) == len(options):
-                return None
-
-            for option in options:
-                if option not in group:
-                    new_group = tuple(sorted(list(group) + [option], key=int, reverse=True))
-
-                    self.structure[new_group] = self.structure.get(new_group, (set(), {}))
-                    self.structure[group][0].add(new_group)
-                    recurse(new_group, options)
-
-        recurse(tuple(), self.numbers)
+        self._recurse(tuple(), self.numbers)
 
         for number_group in self.structure[tuple()][0]:
             result = int(number_group[0])
             self.structure[number_group][1][result] = set([MathList(number_group, result)])
-
 
     def generate_expressions(self):
 
@@ -298,6 +323,57 @@ def print_closest_answers(results_dict, target):
         print(f'\t{result}')
         [print(' '.join(x)) for x in results_dict[result]]
         # [print(' '.join(x.extract_expression(prefix=True)),'\t', ''.join(x.extract_expression(infix=True))) for x in results_dict[result]]
+
+
+# class ExpressionGenerator:
+#     def __init__(self, values: list[int]):
+#         self.operands = tuple(values)
+#         self.num_operators = 0
+#         self.num_operands = 0
+#
+#     def __iter__(self):
+#         self.num_operators = 0
+#         self.num_operands = 0
+#         return self
+#
+#     def __next__(self):
+#         if self.num_operands >= len(self.operands) - 1:
+#             options = self.operands
+#         elif self.num_operands <= self.num_operators:
+#             options = self.operands
+
+def generate_expressions(values: list[int]):
+    operands = tuple(sorted(values, reverse=True))
+    num_operators = 0
+    num_operands = 0
+
+    while num_operands < len(operands):
+        if num_operands >= len(operands) - 1:
+            options = operands
+        elif num_operands <= num_operators:
+            options = operands
+
+class TreeRecursionGenerator:
+    def __init__(self, values: list[int]):
+        self.operands = tuple(sorted(values, reverse=True))
+        self.found_values = {}
+
+        self.generate_recurse(self.operands)
+
+    def _combine_operands(self, op, a, b):
+        operator_methods = {
+            '+': int.__add__,
+            '-': int.__sub__,
+            '*': int.__mul__,
+            '/': int.__truediv__}
+
+        return operator_methods[op](a, b)
+
+    def generate_recurse(self, operands):
+        for a, b in itertools.combinations(operands, 2):
+            for op in OPERATORS:
+                result = self._combine_operands(op, a, b)
+                # self.generate_recurse(operands - {a, b} + {result})
 
 
 def main():
