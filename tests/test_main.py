@@ -1,6 +1,7 @@
 import unittest
 from unittest import mock
 from countdown_numbers_solver.main import choose_numbers, print_closest_answers, main
+from countdown_numbers_solver.math_structures import MathList
 
 
 class TestTreeRecursionGenerator(unittest.TestCase):
@@ -16,7 +17,9 @@ class TestFunctions(unittest.TestCase):
             self.assertTrue(sum(number <= 10 for number in numbers) == 4)
 
     def test_print_closest_answers(self):
-        pass
+        print_closest_answers({100: [MathList(['100'])]}, 100)
+        print_closest_answers({100: [MathList(['99'])]}, 100)
 
     def test_main(self):
-        pass
+        with mock.patch('countdown_numbers_solver.main.input', side_effect=['4', 'n']):
+            main()
