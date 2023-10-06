@@ -15,49 +15,37 @@ class MathList:
         self.expression = expression
         self.result = result
 
-    def __add__(self, other_expression):
-        new_expression = ['+'] + self.expression + other_expression
-
-        assert self.result >= other_expression.result
-        new_result = self.result + other_expression.result
+    def __add__(self, other):
+        new_expression = ['+'] + self.expression + other.expression
+        new_result = self.result + other.result
 
         return MathList(new_expression, new_result)
 
-    def __sub__(self, other_expression):
-        new_expression = ['-'] + self.expression + other_expression
-
-        if self.result == other_expression.result:
-            return None
-
-        assert self.result >= other_expression.result
-        new_result = self.result - other_expression.result
+    def __sub__(self, other):
+        new_expression = ['-'] + self.expression + other.expression
+        new_result = self.result - other.result
 
         return MathList(new_expression, new_result)
 
-    def __mul__(self, other_expression):
-        new_expression = ['*'] + self.expression + other_expression
-
-        if self.result == 1 or other_expression.result == 1:
-            return None
-
-        assert self.result >= other_expression.result
-        new_result = self.result * other_expression.result
+    def __mul__(self, other):
+        new_expression = ['*'] + self.expression + other.expression
+        new_result = self.result * other.result
 
         return MathList(new_expression, new_result)
 
-    def __truediv__(self, other_expression):
-        new_expression = ['/'] + self.expression + other_expression
+    def __truediv__(self, other):
+        if other.result == 0:
+            raise ZeroDivisionError
+        if self.result % other.result != 0:
+            raise ValueError(f'{self.result} is not divisible by {other.result}')
 
-        if self.result == 1 or other_expression.result == 1:
-            return None
-        if self.result % other_expression.result != 0:
-            return None
-
-        assert self.result >= other_expression.result
-
-        new_result = int(self.result / other_expression.result)
+        new_expression = ['/'] + self.expression + other.expression
+        new_result = int(self.result / other.result)
 
         return MathList(new_expression, new_result)
+
+    def __eq__(self, other):
+        return self.result == other.result
 
     def __hash__(self):
         return tuple(self.expression).__hash__()
@@ -121,7 +109,7 @@ class MathList:
             func(self, i)
 
             # Check if an input was erroneus
-            if operand_a is '' or operand_b is '':
+            if operand_a == '' or operand_b == '':
                 return ''
 
             # return func([sub_expression[0],
@@ -155,7 +143,7 @@ class MathList:
                 operand_b = recurse(sub_expression[index:])
 
                 # Check if an input was erroneous
-                if operand_a is '' or operand_b is '':
+                if operand_a == '' or operand_b == '':
                     return ''
 
                 return ['('] + operand_a + [' ', sub_expression[0], ' '] + operand_b + [')']
@@ -163,15 +151,3 @@ class MathList:
         expression = ''.join(recurse())
 
         return expression[1:-1] if len(self.expression) > 1 else expression
-
-
-if __name__ == "__main__":
-    # a = MathTree(['+', '2', '1'], prefix=True, sort=True)
-    a = MathList(['+', '2', '1'], 3)
-    b = MathList(['-', '4', '3'], 1)
-    print(a + b)
-    print(a - b)
-    print(a * b)
-    print(a / b)
-    print((a + b).to_infix())
-    print(b.to_infix())
