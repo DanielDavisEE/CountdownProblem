@@ -1,10 +1,3 @@
-"""
-bruteforce_solutions22 (which uses dynamic programming and exclusively operates
-on binary maths trees) has been improved to almost parity with bruteforce_solutions2
-(which uses a greedy approach, operating on prefix expressions)
-
-
-"""
 import itertools
 import random
 from countdown_numbers_solver.math_structures import MathList, OPERATORS
@@ -16,6 +9,12 @@ LARGE_NUMBERS = [25, 50, 75, 100]
 
 
 class TreeRecursionGenerator:
+    """
+    A class which attempts to generate all possible answers from combining a list of
+    values. Not guaranteed to find all unique expressions for a particular value as it considers
+    expressions identical if they use the same numbers and have the same answer, and discards
+    duplicates. For example (2 + 2) and (2 * 2) would be considered identical.
+    """
     operator_methods = {
         '+': MathList.__add__,
         '-': MathList.__sub__,
@@ -25,7 +24,7 @@ class TreeRecursionGenerator:
     def __init__(self, values: list[int]):
         self.operands = tuple([MathList([str(value)]) for value in sorted(values)])
         self.results = {}
-        self._found_values = set([None])
+        self._found_values = {None}
 
         self.generate_recurse(list(self.operands))
 
@@ -35,7 +34,8 @@ class TreeRecursionGenerator:
         except (ValueError, ZeroDivisionError):
             return None
 
-    def _get_complement(self, operands, used):
+    @staticmethod
+    def _get_complement(operands, used):
         return [operands[i] for i in range(len(operands)) if i not in used]
 
     def generate_recurse(self, operands):
