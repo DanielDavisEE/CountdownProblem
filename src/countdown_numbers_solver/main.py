@@ -1,6 +1,6 @@
 """
-bruteforce_solutions2 (which uses dynamic programming and exclusively operates
-on binary maths trees) has been improved to almost parity with bruteforce_solutions
+bruteforce_solutions22 (which uses dynamic programming and exclusively operates
+on binary maths trees) has been improved to almost parity with bruteforce_solutions2
 (which uses a greedy approach, operating on prefix expressions)
 
 
@@ -15,7 +15,6 @@ DEBUG = False
 TOTAL_NUMBERS = 6
 SMALL_NUMBERS = sorted([x for x in range(1, 11)] * 2)
 LARGE_NUMBERS = [25, 50, 75, 100]
-POWERS_OF_2 = [2 ** x for x in range(8)]
 
 
 # ---------------
@@ -99,7 +98,7 @@ class EquationGenerator():
         }
         """
 
-        structure = {tuple(): (set(), {})}
+        self.structure = {tuple(): (set(), {})}
 
         def recurse(group, options):
             if len(group) == len(options):
@@ -109,17 +108,16 @@ class EquationGenerator():
                 if option not in group:
                     new_group = tuple(sorted(list(group) + [option], key=int, reverse=True))
 
-                    structure[new_group] = structure.get(new_group, (set(), {}))
-                    structure[group][0].add(new_group)
+                    self.structure[new_group] = self.structure.get(new_group, (set(), {}))
+                    self.structure[group][0].add(new_group)
                     recurse(new_group, options)
 
         recurse(tuple(), self.numbers)
 
-        for number_group in structure[tuple()][0]:
+        for number_group in self.structure[tuple()][0]:
             result = int(number_group[0])
-            structure[number_group][1][result] = set([MathList(number_group, result)])
+            self.structure[number_group][1][result] = set([MathList(number_group, result)])
 
-        self.structure = structure
 
     def generate_expressions(self):
 
@@ -197,7 +195,78 @@ class EquationGenerator():
 # Functions
 # ------------------------------
 
-def bruteforce_solutions(numbers):
+# def bruteforce_solutions(numbers, n=None):
+#     """list, int -> dict
+#        Using a recursion tree, bruteforce all possible workings using the given
+#           numbers, then evaluate and store their results.
+#     """
+#     results_dict = {}  # {key: None for key in range(100, 1000)}
+#     if n is None:
+#         n = 2 * len(numbers) - 1
+#     operator_limit = len(numbers) - 1
+#     operand_limit = len(numbers)
+#     buffer_length = (len(numbers) + len(OPERATORS)) * len(OPERATORS)
+#     buffer_progress = [0]
+#
+#     def recurse(expression, operator_count, operand_count, options, max_length=n):
+#         # Catch final recursion. A finished expression always ends with None.
+#         if len(expression) > 0 and expression[-1] is None:
+#             expression = MathTree(expression[:-1], sort=True, prefix=True)
+#             result = expression.result
+#             if not result is None and not expression.redundant and result >= 0:
+#                 if result not in results_dict.keys():
+#                     results_dict[result] = []
+#
+#                 if expression not in results_dict[result]:
+#                     results_dict[result] += [expression]
+#
+#         # Continue recursion
+#         else:
+#             # If it gives a proper expression, terminate
+#             if operand_count - 1 == operator_count:
+#                 recurse(expression + [None], operator_count,
+#                         operand_count, options)
+#             else:
+#                 for i in options:
+#                     if len(expression) == 1:
+#                         buffer_progress[0] += 1
+#                         # print(f'|{"."*buffer_progress[0]}{" "*(buffer_length - buffer_progress[0])}|')
+#
+#                     # If it is an operator, check it is within limits
+#                     if i in OPERATORS:
+#                         if operator_count < operator_limit:
+#                             recurse(expression + [i], operator_count + 1,
+#                                     operand_count, options)
+#
+#                     # Check the number of operands is within limits before
+#                     #    adding one.
+#                     elif (operand_count < 2 * operator_count
+#                           and operand_count < operand_limit):
+#                         # Is this a leaf node with a sibling?
+#                         if (len(expression) > 2
+#                                 and expression[-1].isdigit()):
+#                             # Ensure the subtraction doesn't give a negative number
+#                             if (expression[-2] == '-'
+#                                     and int(i) > int(expression[-1])):
+#                                 return None
+#                             # Ensure a division gives a whole number
+#                             if (expression[-2] == '/'
+#                                     and (int(expression[-1])) % int(i) != 0
+#                                     or int(expression[-1]) / int(i) == 0):
+#                                 return None
+#                         options_tmp = options.copy()
+#                         options_tmp.remove(i)
+#                         recurse(expression + [i], operator_count,
+#                                 operand_count + 1, options_tmp)
+#
+#     # Run bruteforce recursion to find all operations using the given numbers
+#     options = [str(x) for x in numbers]
+#     options.extend(OPERATORS)
+#     recurse([], 0, 0, options)
+#     return results_dict, {}
+
+
+def bruteforce_solutions2(numbers):
     generator = EquationGenerator([str(x) for x in numbers])
     # [print(f"{x}{' '*(20-len(str(x)))}{y}") for x, y in generator.structure.items()]
     generator.generate_expressions()
@@ -242,7 +311,7 @@ def main():
         # [100, 25, 8, 1, 9, 10], 364
         # choose_numbers()
 
-        results_dict, repeats_dict = bruteforce_solutions(numbers)
+        results_dict, repeats_dict = bruteforce_solutions2(numbers)
         if DEBUG:
             [print(x) for x in results_dict.items()]
 
@@ -271,7 +340,7 @@ if __name__ == '__main__':
 
     numbers = [2, 10, 7, 5]  # , 25, 75]
 
-    dict_b, _ = bruteforce_solutions(numbers)
+    dict_b, _ = bruteforce_solutions2(numbers)
 
     print(f'\n{len(dict_b.keys())} unique numbers were found.')
     tmp = 0

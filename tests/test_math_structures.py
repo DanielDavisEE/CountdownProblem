@@ -1,7 +1,7 @@
 import unittest
 from unittest import mock
 
-from src.math_structures import MathList
+from countdown_numbers_solver.math_structures import MathList
 
 
 class TestMathList(unittest.TestCase):
